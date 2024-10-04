@@ -7,6 +7,9 @@
 
 using namespace std;
 
+enum Pin { Low, PullDown, HiZ, PullUp, High };
+bool operator&(Pin left, Pin right);
+
 class Clock {
 public:
     enum Month {
@@ -19,11 +22,7 @@ public:
     operator string() const;
     operator uint32_t() const;
     void tick();
+    Sensor sense(const Pin monthPin) const;
 
     array<uint8_t, 4> hands;
 };
-
-enum Pin { Low, PullDown, HiZ, PullUp, High };
-bool operator&(Pin left, Pin right);
-
-Sensor sense(const Clock& clock, const Pin monthPin);

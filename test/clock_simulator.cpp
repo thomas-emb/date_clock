@@ -4,16 +4,27 @@
 
 #include "clock_simulator.hpp"
 
+bool operator&(Pin left, Pin right)
+{
+    if ((left == High && right == Low) || (left == Low && right == High) || (left == HiZ && right == HiZ))
+        throw exception();
+    if (left == High || right == High) return true;
+    if (left == Low || right == Low) return false;
+    if ((left == PullDown && right == PullUp) || (left == PullUp && right == PullDown))
+        throw exception();
+    if (left == PullUp || right == PullUp) return true;
+    if (left == PullDown || right == PullDown) return false;
+    throw exception();
+}
+
 Clock::Clock(uint8_t hour, uint8_t min, uint8_t sec, uint8_t year)
 : hands{hour, min, sec, year}
 {
-
 }
 
 Clock::Clock(Month month, uint8_t day, uint8_t weekday, uint8_t year)
 : hands{uint8_t((month + 7) % 12), uint8_t((day + 44) % 60), uint8_t(36 - (weekday * 2)), year}
 {
-
 }
 
 Clock::operator string() const
@@ -45,24 +56,7 @@ void Clock::tick()
         hands[Y] = (hands[Y] + 1) % 4;
 }
 
-bool operator&(Pin left, Pin right)
-{
-    //  left | L L L Z Z Z H H H
-    // right | L Z H L Z H L Z H
-    // ------+-------------------
-    //   out | L L X L X H X H H  L&H is a short circuit, Z&Z is undefined
-    if ((left == High && right == Low) || (left == Low && right == High) || (left == HiZ && right == HiZ))
-        throw exception();
-    if (left == High || right == High) return true;
-    if (left == Low || right == Low) return false;
-    if ((left == PullDown && right == PullUp) || (left == PullUp && right == PullDown))
-        throw exception();
-    if (left == PullUp || right == PullUp) return true;
-    if (left == PullDown || right == PullDown) return false;
-    throw exception();
-}
-
-Sensor sense(const Clock& clock, const Pin monthPin)
+Sensor Clock::sense(const Pin monthPin) const
 {   /*
      * Encoder for day-of-month uses two contacts connected to a third contact that is on the week encoder,
      * the week encoder is closed on valid day of week positions, shorting to ground (false),
@@ -74,10 +68,10 @@ Sensor sense(const Clock& clock, const Pin monthPin)
      */
     Sensor result;
     vector<uint8_t> weekdays{24, 26, 28, 30, 32, 34, 36};
-    bool weekday = find(weekdays.begin(), weekdays.end(),clock.hands[Clock::S]) != weekdays.end();
-    result.d1_30 = weekday && (clock.hands[Clock::M] >= 45 || clock.hands[Clock::M] <= 14);
-    result.d_29_31 = weekday && (clock.hands[Clock::M] >= 13 && clock.hands[Clock::M] <= 15);
-    result.m = monthPin & vector<Pin>{Low, High, High, Low, High, Low, High, High, HiZ, High, Low, High}[clock.hands[Clock::H]];
-    result.y = clock.hands[Clock::Y] == 0;
+    bool weekday = std::find(weekdays.begin(), weekdays.end(), hands[S]) != weekdays.end();
+    result.d1_30 = weekday && (hands[M] >= 45 || hands[M] <= 14);
+    result.d_29_31 = weekday && (hands[M] >= 13 && hands[M] <= 15);
+    result.m = monthPin & vector<Pin>{Low, High, High, Low, High, Low, High, High, HiZ, High, Low, High}[hands[H]];
+    result.y = hands[Y] == 0;
     return result;
 }

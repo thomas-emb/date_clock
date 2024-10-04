@@ -1,6 +1,7 @@
 add_executable(
   clock_test
-  test.cpp
+  clock_test.cpp
+  simulator_test.cpp
   ../src/clock.c
   clock_simulator.cpp
 )

@@ -37,6 +37,11 @@ vector<EncodingExpectations> years = {
     {{ 0,  0, 36, 2}, "16 Jun, day0 non-leap", {1,0,0,0}, false}, // non-leap year
     {{ 0,  0, 36, 3}, "16 Jun, day0 non-leap", {1,0,0,0}, false}, // non-leap year
 };
+vector<EncodingExpectations> constructor = {
+    {{ Clock::Month::Jan,  1, 3, 0},  "1 Jan, day3 leap", {1,0,1,1}, false},
+    {{ Clock::Month::Jun, 24, 0, 0}, "24 Jun, day0 leap", {1,0,0,1}, false},
+};
+
 
 class TestSimulator: public ::testing::TestWithParam<EncodingExpectations>{};
 
@@ -52,14 +57,15 @@ TEST_P(TestSimulator, test)
     auto param = GetParam();
     Clock clock(get<0>(param));
     EXPECT_EQ(string(clock), get<1>(param));
-    EXPECT_EQ(sense(clock, PullUp), get<2>(param));
-    EXPECT_EQ(sense(clock, PullDown).m, get<2>(param).m ^ get<3>(param));
+    EXPECT_EQ(clock.sense(PullUp), get<2>(param));
+    EXPECT_EQ(clock.sense(PullDown).m, get<2>(param).m ^ get<3>(param));
 }
 
 INSTANTIATE_TEST_SUITE_P(weeks, TestSimulator, ::testing::ValuesIn(weeks));
 INSTANTIATE_TEST_SUITE_P(days, TestSimulator, ::testing::ValuesIn(days));
 INSTANTIATE_TEST_SUITE_P(months, TestSimulator, ::testing::ValuesIn(months));
 INSTANTIATE_TEST_SUITE_P(years, TestSimulator, ::testing::ValuesIn(years));
+INSTANTIATE_TEST_SUITE_P(constuctor, TestSimulator, ::testing::ValuesIn(constructor));
 
 
 class TestPin: public ::testing::TestWithParam<tuple<Pin, Pin, bool, bool>>{};
