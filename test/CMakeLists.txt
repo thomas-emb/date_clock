@@ -1,5 +1,3 @@
-enable_testing()
-
 add_executable(
   clock_test
   test.cpp

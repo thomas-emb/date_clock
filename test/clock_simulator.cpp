@@ -17,10 +17,14 @@ Clock::Clock(Month month, uint8_t day, uint8_t weekday, uint8_t year)
 }
 
 Clock::operator string() const
-{
+{    
+    static const array<string, 12> MonthStr {
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    };
+
     return
         to_string(((hands[M] + 44) % 60) - 28) + 
-        " " + MonthStr[(hands[H] + 4) % 12] + 
+        " " + MonthStr[(hands[H] + 5) % 12] + 
         ", day" + to_string((36 - hands[S])/2) + ((hands[S] % 2) ? ".5" : "") +
         (hands[Y]?" non-leap":" leap");
 }
@@ -47,8 +51,14 @@ bool operator&(Pin left, Pin right)
     // right | L Z H L Z H L Z H
     // ------+-------------------
     //   out | L L X L X H X H H  L&H is a short circuit, Z&Z is undefined
-    if ((left == PullDown && right != PullUp) || (left != PullUp && right == PullDown)) return false;
-    if ((left == PullUp && right != PullDown) || (left != PullDown && right == PullUp)) return true;
+    if ((left == High && right == Low) || (left == Low && right == High) || (left == HiZ && right == HiZ))
+        throw exception();
+    if (left == High || right == High) return true;
+    if (left == Low || right == Low) return false;
+    if ((left == PullDown && right == PullUp) || (left == PullUp && right == PullDown))
+        throw exception();
+    if (left == PullUp || right == PullUp) return true;
+    if (left == PullDown || right == PullDown) return false;
     throw exception();
 }
 
@@ -65,9 +75,9 @@ Sensor sense(const Clock& clock, const Pin monthPin)
     Sensor result;
     vector<uint8_t> weekdays{24, 26, 28, 30, 32, 34, 36};
     bool weekday = find(weekdays.begin(), weekdays.end(),clock.hands[Clock::S]) != weekdays.end();
-    result.d1_30 = weekday && (clock.hands[Clock::M] >= 45 || clock.hands[Clock::M] <= 15);
-    result.d_29_31 = weekday && (clock.hands[Clock::M] >= 14 && clock.hands[Clock::M] <= 16);
-    result.m = monthPin & vector<Pin>{PullDown, PullUp, PullUp, PullDown, PullUp, PullDown, PullUp, PullUp, HiZ, PullUp, PullDown, PullUp}[clock.hands[Clock::H]];
+    result.d1_30 = weekday && (clock.hands[Clock::M] >= 45 || clock.hands[Clock::M] <= 14);
+    result.d_29_31 = weekday && (clock.hands[Clock::M] >= 13 && clock.hands[Clock::M] <= 15);
+    result.m = monthPin & vector<Pin>{Low, High, High, Low, High, Low, High, High, HiZ, High, Low, High}[clock.hands[Clock::H]];
     result.y = clock.hands[Clock::Y] == 0;
     return result;
 }
