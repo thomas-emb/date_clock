@@ -29,13 +29,13 @@ Clock::Clock(Month month, uint8_t day, uint8_t weekday, uint8_t year)
 
 Clock::operator string() const
 {    
-    static const array<string, 12> MonthStr {
+    static const array<string, 12> MonthString {
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     };
 
     return
         to_string(((hands[M] + 44) % 60) - 28) + 
-        " " + MonthStr[(hands[H] + 5) % 12] + 
+        " " + MonthString[(hands[H] + 5) % 12] + 
         ", day" + to_string((36 - hands[S])/2) + ((hands[S] % 2) ? ".5" : "") +
         (hands[Y]?" non-leap":" leap");
 }
@@ -49,11 +49,15 @@ void Clock::tick()
 {
     hands[S] = (hands[S] + 1) % 60;
     if (hands[S] == 0)
+    {
         hands[M] = (hands[M] + 1) % 60;
-    if (hands[M] == 0)
-        hands[H] = (hands[H] + 1) % 12;
-    if (hands[H] == 0)
-        hands[Y] = (hands[Y] + 1) % 4;
+        if (hands[M] == 30) // note: the hour hand [2] indicates closest hour, not digital time hour
+        {
+            hands[H] = (hands[H] + 1) % 12;
+            if (hands[H] == 0)
+                hands[Y] = (hands[Y] + 1) % 4;
+        }
+    }
 }
 
 Sensor Clock::sense(const Pin monthPin) const

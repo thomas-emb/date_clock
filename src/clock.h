@@ -16,7 +16,12 @@ typedef struct _Sensor {
     uint16_t y : 1;
 } Sensor;
 
-void read_sensors(Sensor values);
+extern uint16_t enable;
+extern uint16_t monthPin;
+extern Sensor sensor;
+
+void wake(void);
+void tick(void);
 
 #ifdef __cplusplus
 }
