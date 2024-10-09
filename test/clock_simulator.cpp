@@ -40,11 +40,6 @@ Clock::operator string() const
         (hands[Y]?" non-leap":" leap");
 }
 
-Clock::operator uint32_t() const
-{
-    return hands[H] * 0x1000000 + hands[M] * 0x10000 + hands[S] * 0x100 + hands[Y];
-}
-
 void Clock::tick()
 {
     hands[S] = (hands[S] + 1) % 60;
@@ -78,4 +73,18 @@ Sensor Clock::sense(const Pin monthPin) const
     result.m = monthPin & vector<Pin>{Low, High, High, Low, High, Low, High, High, HiZ, High, Low, High}[hands[H]];
     result.y = hands[Y] == 0;
     return result;
+}
+
+bool operator==(const Clock& left, const Clock& right)
+{
+    return left.hands == right.hands;
+}
+
+std::ostream& operator<<(std::ostream& stream, const Clock& clock)
+{
+    return stream << "["
+        << int(clock.hands[0]) << ", "
+        << int(clock.hands[1]) << ", "
+        << int(clock.hands[2]) << ", "
+        << int(clock.hands[3]) << "]";
 }

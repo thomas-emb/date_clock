@@ -2,6 +2,7 @@ add_executable(
   clock_test
   clock_test.cpp
   simulator_test.cpp
+  wire_logic_test.cpp
   ../src/clock.c
   clock_simulator.cpp
 )

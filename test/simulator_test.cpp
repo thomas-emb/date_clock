@@ -42,15 +42,17 @@ vector<EncodingExpectations> constructor = {
     {{ Clock::Month::Jun, 24, 0, 0}, "24 Jun, day0 leap", {1,0,0,1}, false},
 };
 
-
 class TestSimulator: public ::testing::TestWithParam<EncodingExpectations>{};
-
 
 bool operator==(const Sensor& left, const Sensor& right)
 {
     return (left.d1_30 == right.d1_30) && (left.d_29_31 == right.d_29_31) && (left.m == right.m) && (left.y == right.y);
 }
 
+std::ostream& operator<<(std::ostream& stream, const Sensor& sensor)
+{
+    return stream << "b" << sensor.d1_30 << sensor.d_29_31 << sensor.m << sensor.y;
+}
 
 TEST_P(TestSimulator, test)
 {
@@ -66,50 +68,3 @@ INSTANTIATE_TEST_SUITE_P(days, TestSimulator, ::testing::ValuesIn(days));
 INSTANTIATE_TEST_SUITE_P(months, TestSimulator, ::testing::ValuesIn(months));
 INSTANTIATE_TEST_SUITE_P(years, TestSimulator, ::testing::ValuesIn(years));
 INSTANTIATE_TEST_SUITE_P(constuctor, TestSimulator, ::testing::ValuesIn(constructor));
-
-
-class TestPin: public ::testing::TestWithParam<tuple<Pin, Pin, bool, bool>>{};
-
-vector<tuple<Pin, Pin, bool, bool>> pinPermutations = {
-    // inputA    inputB  output error
-    {    High,     High,  true, false},
-    {    High,   PullUp,  true, false},
-    {    High,      HiZ,  true, false},
-    {    High, PullDown,  true, false},
-    {    High,      Low,  true,  true},
-
-    {  PullUp,     High,  true, false},
-    {  PullUp,   PullUp,  true, false},
-    {  PullUp,      HiZ,  true, false},
-    {  PullUp, PullDown,  true,  true},
-    {  PullUp,      Low, false, false},
-
-    {     HiZ,     High,  true, false},
-    {     HiZ,   PullUp,  true, false},
-    {     HiZ,      HiZ,  true,  true},
-    {     HiZ, PullDown, false, false},
-    {     HiZ,      Low, false, false},
-
-    {PullDown,     High,  true, false},
-    {PullDown,   PullUp,  true,  true},
-    {PullDown,      HiZ, false, false},
-    {PullDown, PullDown, false, false},
-    {PullDown,      Low, false, false},
-    
-    {     Low,     High,  true,  true},
-    {     Low,   PullUp, false, false},
-    {     Low,      HiZ, false, false},
-    {     Low, PullDown, false, false},
-    {     Low,      Low, false, false},
-};
-
-TEST_P(TestPin, and)
-{
-    auto param = GetParam();
-    if (get<3>(param))
-        EXPECT_THROW(get<0>(param) & get<1>(param), exception);
-    else
-        ASSERT_EQ(get<0>(param) & get<1>(param), get<2>(param));
-}
-
-INSTANTIATE_TEST_SUITE_P(, TestPin, ::testing::ValuesIn(pinPermutations));
