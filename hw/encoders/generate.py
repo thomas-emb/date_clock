@@ -114,7 +114,7 @@ def createFootprint(name, hole, size, margin, spacing, rings):
     return kicad_mod
 
 def writeEncoder(name, slices):
-    Path("../../msp_clock/msp_clock/date clock encoders.pretty/"+name+".kicad_mod").write_text(
+    Path("date clock encoders.pretty/"+name+".kicad_mod").write_text(
         createFootprint(name, 5, 15, 0.5, 0.15, slices)
     )
 
