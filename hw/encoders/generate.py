@@ -1,17 +1,17 @@
-import uuid
+from uuid import uuid4
 from sexpdata import Symbol, dumps as SExpDump # pip install sexpdata
-import re
-from cmath import rect, phase, pi
+from re import sub as regexSubstitute
+from cmath import rect, pi
 from pathlib import Path
+from math import asin, radians
 
-
-def property(name, value, position, layer="F.Fab", hide=None, size = [1, 1], thickness = 0.15, property_name="property"):
-    property = [Symbol(property_name), name, str(value),
+def property(name, value, position, layer="F.Fab", hide=None, size = [1, 1], thickness = 0.15, propertyName="property"):
+    property = [Symbol(propertyName), name, str(value),
          [Symbol("at"), position[0], position[1], position[2]],
          [Symbol("unlocked"), True],
          [Symbol("layer"), layer],
          # hide
-         [Symbol("uuid"), str(uuid.uuid4())],
+         [Symbol("uuid"), str(uuid4())],
          [Symbol("effects"),
             [Symbol("font"),
                 [Symbol("size"), size[0], size[1]],
@@ -20,18 +20,24 @@ def property(name, value, position, layer="F.Fab", hide=None, size = [1, 1], thi
         property.insert(6, [Symbol("hide"), hide])
     return property
 
-def rad(degrees):
-    return degrees/360 * 2*pi
-
-def polygon(innerRadius, outerRadius, centerAngle, angularWidth, spacing=0):
+def calculatePolygon(innerRadius, outerRadius, centerAngle, angularWidth, spacing=0):
     angles = [centerAngle - angularWidth/2, centerAngle, centerAngle + angularWidth/2]
-    inner = [rect(innerRadius, rad(angles[0])), rect(innerRadius, rad(angles[1])), rect(innerRadius, rad(angles[2]))]
-    outer = [rect(outerRadius, rad(angles[2])), rect(outerRadius, rad(angles[1])), rect(outerRadius, rad(angles[0]))]
-    if spacing != 0: # spacing is not exact, but good enough for small spacings
-        inner[0] = rect(innerRadius, phase(inner[0] + rect(spacing, rad(angles[0] + 90))))
-        outer[2] = rect(outerRadius, phase(outer[2] + rect(spacing, rad(angles[0] + 90))))
-        inner[2] = rect(innerRadius, phase(inner[2] + rect(spacing, rad(angles[2] - 90))))
-        outer[0] = rect(outerRadius, phase(outer[0] + rect(spacing, rad(angles[2] - 90))))
+    innerSpacingAngle = asin(spacing / innerRadius)
+    outerSpacingAngle = asin(spacing / outerRadius)
+    inner = [
+        rect(innerRadius, radians(angles[0]) + innerSpacingAngle),
+        rect(innerRadius, radians(angles[1])),
+        rect(innerRadius, radians(angles[2]) - innerSpacingAngle)
+    ]
+    outer = [
+        rect(outerRadius, radians(angles[2]) - outerSpacingAngle),
+        rect(outerRadius, radians(angles[1])),
+        rect(outerRadius, radians(angles[0]) + outerSpacingAngle)
+    ]
+    return [inner, outer]
+    
+def polygon(innerRadius, outerRadius, centerAngle, angularWidth, spacing=0):
+    [inner, outer] = calculatePolygon(innerRadius, outerRadius, centerAngle, angularWidth, spacing)
     return [Symbol("fp_poly"),
         [Symbol("pts"),
             [Symbol("arc"),
@@ -51,7 +57,7 @@ def polygon(innerRadius, outerRadius, centerAngle, angularWidth, spacing=0):
         ],
         [Symbol("fill"), Symbol("solid")],
         [Symbol("layer"), "F.Cu"],
-        [Symbol("uuid"), str(uuid.uuid4())]
+        [Symbol("uuid"), str(uuid4())]
     ]
 
 def clearancePad(hole, size):
@@ -62,7 +68,7 @@ def clearancePad(hole, size):
         [Symbol("drill"), hole],
         [Symbol("layers"), "*.Mask"],
         [Symbol("remove_unused_layers"), False],
-        [Symbol("uuid"), str(uuid.uuid4())]
+        [Symbol("uuid"), str(uuid4())]
     ]
 
 class Slice:
@@ -75,6 +81,12 @@ class Slice:
 
 def Circle():
     return [Slice(0, 180), Slice(180, 180)]
+
+def renderFile(struct):
+    kicad_mod = SExpDump(struct, true_as="yes", false_as="no", pretty_print=True, indent_as="\t")
+    kicad_mod = regexSubstitute("\n[\t]+(?=[^\t()])", " ", kicad_mod)
+    kicad_mod = regexSubstitute("\\( ", "(", kicad_mod)
+    return kicad_mod
 
 def createFootprint(name, hole, size, margin, spacing, rings):
     innerRadius = hole/2 + (margin - spacing/2)
@@ -98,24 +110,21 @@ def createFootprint(name, hole, size, margin, spacing, rings):
                 slice.width,
                 spacing if slice.space else 0
             ))
-    kicad_mod = [
+    struct = [
         Symbol("footprint"), name,
         [Symbol("version"), 20240108],
         [Symbol("generator"), "python"],
         [Symbol("generator_version"), "0.1"],
         [Symbol("layer"), "F.Cu"]
     ] + result + [
-        property(Symbol("user"), "${REFERENCE}", [-size/2, size/2, 0], property_name="fp_text"),
+        property(Symbol("user"), "${REFERENCE}", [-size/2, size/2, 0], propertyName="fp_text"),
         clearancePad(hole, size)
     ]
-    kicad_mod = SExpDump(kicad_mod, true_as="yes", false_as="no", pretty_print=True, indent_as="\t")
-    kicad_mod = re.sub("\n[\t]+(?=[^\t()])", " ", kicad_mod)
-    kicad_mod = re.sub("\\( ", "(", kicad_mod)
-    return kicad_mod
+    return struct
 
 def writeEncoder(name, slices):
     Path("date clock encoders.pretty/"+name+".kicad_mod").write_text(
-        createFootprint(name, 5, 15, 0.5, 0.15, slices)
+        renderFile(createFootprint(name, 5, 15, 0.5, 0.15, slices))
     )
 
 writeEncoder("day", [
