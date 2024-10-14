@@ -1,3 +1,4 @@
+# https://dev-docs.kicad.org/en/file-formats/sexpr-footprint @2024-06-04
 from uuid import uuid4
 from sexpdata import Symbol, dumps as SExpDump # pip install sexpdata
 from re import sub as regexSubstitute
@@ -15,7 +16,10 @@ def property(name, value, position, layer="F.Fab", hide=None, size = [1, 1], thi
          [Symbol("effects"),
             [Symbol("font"),
                 [Symbol("size"), size[0], size[1]],
-                [Symbol("thickness"), thickness]]]]
+                [Symbol("thickness"), thickness]
+            ]
+        ]
+    ]
     if (hide != None):
         property.insert(6, [Symbol("hide"), hide])
     return property
@@ -43,17 +47,17 @@ def polygon(innerRadius, outerRadius, centerAngle, angularWidth, spacing=0):
             [Symbol("arc"),
                 [Symbol("start"), round(inner[0].real, 6), -round(inner[0].imag, 6)],
                 [Symbol("mid"), round(inner[1].real, 6), -round(inner[1].imag, 6)],
-                [Symbol("end"), round(inner[2].real, 6), -round(inner[2].imag, 6)],
+                [Symbol("end"), round(inner[2].real, 6), -round(inner[2].imag, 6)]
             ],
             [Symbol("arc"),
                 [Symbol("start"), round(outer[0].real, 6), -round(outer[0].imag, 6)],
                 [Symbol("mid"), round(outer[1].real, 6), -round(outer[1].imag, 6)],
-                [Symbol("end"), round(outer[2].real, 6), -round(outer[2].imag, 6)],
+                [Symbol("end"), round(outer[2].real, 6), -round(outer[2].imag, 6)]
             ],
         ],
         [Symbol("stroke"),
             [Symbol("width"), 0],
-            [Symbol("type"), Symbol("solid")],
+            [Symbol("type"), Symbol("solid")]
         ],
         [Symbol("fill"), Symbol("solid")],
         [Symbol("layer"), "F.Cu"],
@@ -79,8 +83,8 @@ class Slice:
         self.goIn = goIn
         self.goOut = goOut
 
-def Circle():
-    return [Slice(0, 180), Slice(180, 180)]
+def Circle(rotation = 0):
+    return [Slice(rotation, 180), Slice(rotation+180, 180)]
 
 def renderFile(struct):
     kicad_mod = SExpDump(struct, true_as="yes", false_as="no", pretty_print=True, indent_as="\t")
@@ -88,39 +92,40 @@ def renderFile(struct):
     kicad_mod = regexSubstitute("\\( ", "(", kicad_mod)
     return kicad_mod
 
-def createFootprint(name, hole, size, margin, spacing, rings):
-    innerRadius = hole/2 + (margin - spacing/2)
-    outerRadius = size/2 - (margin - spacing/2)
-    ringHeight = (outerRadius - innerRadius)/len(rings)
+def createRings(innerRadius, outerRadius, margin, spacing, rings):
+    innerRadius += (margin - spacing/2)
+    outerRadius -= (margin - spacing/2)
+    ringHeight = (outerRadius - innerRadius) / len(rings)
     radii = [ring*ringHeight + innerRadius for ring in range(len(rings) + 1)]
-    result = [
+    return [
+        polygon(
+                radii[ring] + (-spacing if slice.goIn else spacing/2),
+                radii[ring+1] - (-spacing if slice.goOut else spacing/2),
+                slice.center,
+                slice.width,
+                spacing if slice.space else 0
+        )
+        for ring, slices in enumerate(rings)
+        for slice in slices
+    ]
+
+def createFootprint(name, hole, size, margin, spacing, rings):
+    return [
+        Symbol("footprint"), name,
+        [Symbol("version"), 20240108],
+        [Symbol("generator"), "python"],
+        [Symbol("generator_version"), "0.1"],
+        [Symbol("layer"), "F.Cu"],
         property("Reference", "P**", [size/2, -size/2, 0], "F.SilkS", thickness=0.1),
         property("Value", name, [size/2, size/2, 0]),
         property("Footprint", "", [0, 0, 0], hide=True),
         property("Datasheet", "", [0, 0, 0], hide=True),
         property("Description", "", [0, 0, 0], hide=True),
         [Symbol("attr"), Symbol("smd")]
-    ]
-    for ring, slices in enumerate(rings):
-        for slice in slices:
-            result.append(polygon(
-                radii[ring] + (-spacing if slice.goIn else spacing/2),
-                radii[ring+1] - (-spacing if slice.goOut else spacing/2),
-                slice.center,
-                slice.width,
-                spacing if slice.space else 0
-            ))
-    struct = [
-        Symbol("footprint"), name,
-        [Symbol("version"), 20240108],
-        [Symbol("generator"), "python"],
-        [Symbol("generator_version"), "0.1"],
-        [Symbol("layer"), "F.Cu"]
-    ] + result + [
+    ] + createRings(hole/2, size/2, margin, spacing, rings) + [
         property(Symbol("user"), "${REFERENCE}", [-size/2, size/2, 0], propertyName="fp_text"),
         clearancePad(hole, size)
     ]
-    return struct
 
 def writeEncoder(name, slices):
     Path("date clock encoders.pretty/"+name+".kicad_mod").write_text(
