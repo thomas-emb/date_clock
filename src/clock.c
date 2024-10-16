@@ -1,6 +1,6 @@
 #include "clock.h"
 
-enum {
+typedef enum {
     seekFirst = 0,
     seekWeek = 2,
     seekMonth = 4,
@@ -13,7 +13,7 @@ uint16_t enable;
 uint16_t monthPin;
 Sensor sensor;
 static uint16_t count;
-static enum State state;
+static State state;
 
 #ifndef __even_in_range
 #include <assert.h>
