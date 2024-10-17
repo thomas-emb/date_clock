@@ -23,6 +23,10 @@ def property(name, value, position, layer="F.Fab", hide=None, size = [1, 1], thi
         property.insert(6, [Symbol("hide"), hide])
     return property
 
+def nice_round(value, digits=0):
+    value = round(value, digits)
+    return value if value != int(value) else int(value)
+
 def calculatePolygon(innerRadius, outerRadius, centerAngle, angularWidth, spacing=0):
     angles = [centerAngle - angularWidth/2, centerAngle, centerAngle + angularWidth/2]
     innerSpacingAngle = asin(spacing / innerRadius)
@@ -38,20 +42,20 @@ def calculatePolygon(innerRadius, outerRadius, centerAngle, angularWidth, spacin
         rect(outerRadius, radians(angles[0]) + outerSpacingAngle)
     ]
     return [inner, outer]
-    
+
 def polygon(innerRadius, outerRadius, centerAngle, angularWidth, spacing=0):
     [inner, outer] = calculatePolygon(innerRadius, outerRadius, centerAngle, angularWidth, spacing)
     return [Symbol("fp_poly"),
         [Symbol("pts"),
             [Symbol("arc"),
-                [Symbol("start"), round(inner[0].real, 6), -round(inner[0].imag, 6)],
-                [Symbol("mid"), round(inner[1].real, 6), -round(inner[1].imag, 6)],
-                [Symbol("end"), round(inner[2].real, 6), -round(inner[2].imag, 6)]
+                [Symbol("start"), nice_round(inner[0].real, 6), -nice_round(inner[0].imag, 6)],
+                [Symbol("mid"), nice_round(inner[1].real, 6), -nice_round(inner[1].imag, 6)],
+                [Symbol("end"), nice_round(inner[2].real, 6), -nice_round(inner[2].imag, 6)]
             ],
             [Symbol("arc"),
-                [Symbol("start"), round(outer[0].real, 6), -round(outer[0].imag, 6)],
-                [Symbol("mid"), round(outer[1].real, 6), -round(outer[1].imag, 6)],
-                [Symbol("end"), round(outer[2].real, 6), -round(outer[2].imag, 6)]
+                [Symbol("start"), nice_round(outer[0].real, 6), -nice_round(outer[0].imag, 6)],
+                [Symbol("mid"), nice_round(outer[1].real, 6), -nice_round(outer[1].imag, 6)],
+                [Symbol("end"), nice_round(outer[2].real, 6), -nice_round(outer[2].imag, 6)]
             ],
         ],
         [Symbol("stroke"),
