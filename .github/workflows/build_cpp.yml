@@ -2,9 +2,7 @@ name: Build C++ tests
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    paths: [ "src/**", "test/**" ]
 
 env:
   BUILD_TYPE: Debug
